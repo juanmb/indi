@@ -93,6 +93,9 @@ class MaxDomeII : public INDI::Dome
     INumber HomePosRN[1];
     INumberVectorProperty HomePosRNP;
 
+    INumber BatteryVoltageN[1];
+    INumberVectorProperty BatteryVoltageNP;
+
   private:
     int nTicksPerTurn;           // Number of ticks per turn of azimuth dome
     unsigned nCurrentTicks;      // Position as reported by the MaxDome II

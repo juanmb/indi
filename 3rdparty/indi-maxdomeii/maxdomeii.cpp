@@ -30,6 +30,9 @@
 #include <string.h>
 #include <unistd.h>
 
+// Only for https://github.com/juanmb/ArduinoDomeController
+#define READ_BATTERY
+
 
 // We declare an auto pointer to dome.
 std::unique_ptr<MaxDomeII> dome(new MaxDomeII());
@@ -159,6 +162,13 @@ bool MaxDomeII::initProperties()
     IUFillNumberVector(&WatchDogNP, WatchDogN, NARRAY(WatchDogN), getDeviceName(), "WATCH_DOG_TIME_SET",
                        "Watch dog time set", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
 
+#ifdef READ_BATTERY
+    // Battery voltage
+    IUFillNumber(&BatteryVoltageN[0], "BATTERY_VOLTAGE", "Volts", "%0.2f", 0.0, 20.0, 0.01, 0.0);
+    IUFillNumberVector(&BatteryVoltageNP, BatteryVoltageN, 1, getDeviceName(), "BATTERY_VOLTAGE",
+                       "Battery Voltage", MAIN_CONTROL_TAB, IP_RO, 60, IPS_OK);
+#endif
+
     // Set default baud rate to 19200
     serialConnection->setDefaultBaudRate(Connection::Serial::B_19200);
 
@@ -178,6 +188,7 @@ bool MaxDomeII::updateProperties()
         defineSwitch(&ShutterModeSP);
         defineSwitch(&HomeSP);
         defineNumber(&WatchDogNP);
+        defineNumber(&BatteryVoltageNP);
 
         SetupParms();
     }
@@ -190,6 +201,7 @@ bool MaxDomeII::updateProperties()
         deleteProperty(ShutterModeSP.name);
         deleteProperty(HomeSP.name);
         deleteProperty(WatchDogNP.name);
+        deleteProperty(BatteryVoltageNP.name);
     }
 
     return true;
@@ -225,6 +237,22 @@ void MaxDomeII::TimerHit()
     if (isConnected() == false)
         return; //  No need to reset timer if we are not connected anymore
 
+#ifdef READ_BATTERY
+    // Get battery voltage
+    float voltage;
+    nError = driver.GetBatteryVoltage(&voltage);
+    handle_driver_error(&nError, &nRetry); // This is a timer, we will not repeat in order to not delay the execution.
+    if (!nError)
+    {
+        BatteryVoltageNP.s = IPS_IDLE;
+        BatteryVoltageN[0].value = voltage;
+    } else
+    {
+        BatteryVoltageNP.s = IPS_ALERT;
+    }
+#endif
+
+    // Get dome status
     nError = driver.Status(&shutterSt, &nAzimuthStatus, &nCurrentTicks, &nHomePosition);
     handle_driver_error(&nError, &nRetry); // This is a timer, we will not repeat in order to not delay the execution.
 

@@ -80,6 +80,9 @@ class MaxDomeIIDriver
         int AbortShutter();
         int ExitShutter();
 
+        // Custom command for ArduinoDomeController
+        int GetBatteryVoltage(float *voltage);
+
     protected:
         int ReadResponse();
         int SendCommand(char cmdId, const char *payload, int payloadLen);

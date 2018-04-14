@@ -46,6 +46,7 @@
 #define TICKS_CMD   0x09 // Set the number of tick per revolution of the dome
 #define ACK_CMD     0x0A // ACK (?)
 #define SETPARK_CMD 0x0B // Set park coordinates and if need to park before to operating shutter
+#define VBAT_CMD    0x0C // Retrieve battery voltage
 
 // Shutter commands
 #define OPEN_SHUTTER            0x01
@@ -437,4 +438,26 @@ int MaxDomeIIDriver::ExitShutter()
 
     char payload[] = { EXIT_SHUTTER };
     return SendCommand(SHUTTER_CMD, payload, sizeof(payload));
+}
+
+/*
+	Read dome battery voltage
+    This is a custom command for ArduinoDomeController:
+    https://github.com/juanmb/ArduinoDomeController
+
+	@param voltage Returns battery voltage
+	@return Same as SendCommand
+*/
+int MaxDomeIIDriver::GetBatteryVoltage(float *voltage)
+{
+    int ret = SendCommand(VBAT_CMD, NULL, 0);
+    if (ret != 0) {
+        return ret;
+    }
+
+    unsigned val = (unsigned)(((uint8_t)buffer[3])*256 + ((uint8_t)buffer[4]));
+    *voltage = (float)val/100;
+
+    LOGF_DEBUG("Battery: %.2f V", *voltage);
+    return 0;
 }
