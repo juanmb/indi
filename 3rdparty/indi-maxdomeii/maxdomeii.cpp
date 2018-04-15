@@ -164,8 +164,8 @@ bool MaxDomeII::initProperties()
 
 #ifdef READ_BATTERY
     // Battery voltage
-    IUFillNumber(&BatteryVoltageN[0], "BATTERY_VOLTAGE", "Volts", "%0.2f", 0.0, 20.0, 0.01, 0.0);
-    IUFillNumberVector(&BatteryVoltageNP, BatteryVoltageN, 1, getDeviceName(), "BATTERY_VOLTAGE",
+    IUFillNumber(&BatteryVoltageN[0], "VOLTAGE", "Volts", "%0.2f", 0.0, 20.0, 0.01, 0.0);
+    IUFillNumberVector(&BatteryVoltageNP, BatteryVoltageN, 1, getDeviceName(), "BATTERY",
                        "Battery Voltage", MAIN_CONTROL_TAB, IP_RO, 60, IPS_OK);
 #endif
 
@@ -246,9 +246,11 @@ void MaxDomeII::TimerHit()
     {
         BatteryVoltageNP.s = IPS_IDLE;
         BatteryVoltageN[0].value = voltage;
+        IDSetNumber(&BatteryVoltageNP, NULL);
     } else
     {
         BatteryVoltageNP.s = IPS_ALERT;
+        IDSetNumber(&BatteryVoltageNP, "Cannot read battery voltage.");
     }
 #endif
 
