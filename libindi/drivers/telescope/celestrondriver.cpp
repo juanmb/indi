@@ -687,6 +687,19 @@ bool CelestronDriver::is_slewing()
     return response[0] != '0';
 }
 
+bool CelestronDriver::get_pier_side(CelestronPierSide *pier_side)
+{
+    set_sim_response("W#");
+    *pier_side = CELESTRON_PIER_UNKNOWN;
+
+    if (!send_command("p", 1, response, 2, true, true))
+        return false;
+
+    // TODO: this conversion may be the opposite in the southern hemisphere
+    *pier_side = (response[0] == 'W' ? CELESTRON_PIER_EAST : CELESTRON_PIER_WEST);
+    return true;
+}
+
 bool CelestronDriver::get_track_mode(CELESTRON_TRACK_MODE *mode)
 {
     set_sim_response("\02#");

@@ -45,6 +45,11 @@ typedef enum { TRACKING_OFF, TRACK_ALTAZ, TRACK_EQN, TRACK_EQS } CELESTRON_TRACK
 typedef enum { RA_AXIS, DEC_AXIS } CELESTRON_AXIS;
 typedef enum { CELESTRON_N, CELESTRON_S, CELESTRON_W, CELESTRON_E } CELESTRON_DIRECTION;
 typedef enum { FW_MODEL, FW_VERSION, FW_GPS, FW_RA, FW_DEC } CELESTRON_FIRMWARE;
+typedef enum {
+    CELESTRON_PIER_UNKNOWN = -1,
+    CELESTRON_PIER_WEST = 0,
+    CELESTRON_PIER_EAST = 1
+} CelestronPierSide;
 
 typedef struct
 {
@@ -118,6 +123,7 @@ class CelestronDriver
         bool get_radec(double *ra, double *dec, bool precise);
         bool get_azalt(double *az, double *alt, bool precise);
         bool get_utc_date_time(double *utc_hours, int *yy, int *mm, int *dd, int *hh, int *minute, int *ss);
+        bool get_pier_side(CelestronPierSide *pier_side);
 
         // Motion
         bool start_motion(CELESTRON_DIRECTION dir, CELESTRON_SLEW_RATE rate);

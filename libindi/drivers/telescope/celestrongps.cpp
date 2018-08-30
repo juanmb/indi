@@ -235,11 +235,15 @@ bool CelestronGPS::updateProperties()
         if (checkMinVersion(2.3, "updating time and location settings"))
             cap |= TELESCOPE_HAS_TIME | TELESCOPE_HAS_LOCATION;
 
-
         if (fwInfo.controllerVersion >= 2.3)
             cap |= TELESCOPE_HAS_TRACK_MODE | TELESCOPE_CAN_CONTROL_TRACK;
         else
             LOG_WARN("Mount firmware does not support track mode.");
+
+        if (fwInfo.Model == "CGEM DX" && fwInfo.controllerVersion >= 4.15)
+            cap |= TELESCOPE_HAS_PIER_SIDE;
+        else
+            LOG_WARN("Mount firmware does not support getting pier side.");
 
         SetTelescopeCapability(cap, 9);
 
@@ -455,7 +459,13 @@ bool CelestronGPS::GotoAzAlt(double az, double alt)
 
 bool CelestronGPS::MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand command)
 {
-    CELESTRON_DIRECTION move = (dir == DIRECTION_NORTH) ? CELESTRON_N : CELESTRON_S;
+    CELESTRON_DIRECTION move;
+
+    if (currentPierSide == PIER_WEST)
+        move = (dir == DIRECTION_NORTH) ? CELESTRON_N : CELESTRON_S;
+    else
+        move = (dir == DIRECTION_NORTH) ? CELESTRON_S : CELESTRON_N;
+
     CELESTRON_SLEW_RATE rate = (CELESTRON_SLEW_RATE)IUFindOnSwitchIndex(&SlewRateSP);
 
     switch (command)
@@ -525,6 +535,14 @@ bool CelestronGPS::ReadScopeStatus()
         LOG_ERROR("Failed to read RA/DEC values.");
         return false;
     }
+
+    CelestronPierSide pier_side;
+    if (driver.get_pier_side(&pier_side) == false)
+    {
+        LOG_ERROR("Failed to get pier side.");
+        return false;
+    }
+    setPierSide((TelescopePierSide)pier_side);
 
     /*if (driver.get_coords_azalt(LocationN[LOCATION_LATITUDE].value, &currentAZ, &currentALT) == false)
         LOG_WARN("Failed to read AZ/ALT values.");
