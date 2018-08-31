@@ -34,6 +34,7 @@ Version with experimental pulse guide support. GC 04.12.2015
 #include <memory>
 #include <cstring>
 #include <unistd.h>
+#include <string>
 
 // Simulation Parameters
 #define GOTO_RATE       5        // slew rate, degrees/s
@@ -240,7 +241,9 @@ bool CelestronGPS::updateProperties()
         else
             LOG_WARN("Mount firmware does not support track mode.");
 
-        if (fwInfo.Model == "CGEM DX" && fwInfo.controllerVersion >= 4.15)
+	bool cge_or_cgem = fwInfo.Model.find("CGE") != std::string::npos;
+
+	if (cge_or_cgem && fwInfo.controllerVersion >= 4.15)
             cap |= TELESCOPE_HAS_PIER_SIDE;
         else
             LOG_WARN("Mount firmware does not support getting pier side.");
