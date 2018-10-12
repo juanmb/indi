@@ -85,7 +85,8 @@ MaxDomeII::MaxDomeII()
     nTargetAzimuth              = -1; //Target azimuth not established
     nTimeSinceLastCommunication = 0;
 
-    SetDomeCapability(DOME_CAN_ABORT | DOME_CAN_ABS_MOVE | DOME_HAS_SHUTTER);
+    SetDomeCapability(DOME_CAN_ABORT | DOME_CAN_ABS_MOVE | DOME_HAS_SHUTTER
+            | DOME_CAN_PARK);
 
     setVersion(INDI_MAXDOMEII_VERSION_MAJOR, INDI_MAXDOMEII_VERSION_MINOR);
 }
@@ -570,6 +571,109 @@ bool MaxDomeII::Abort()
     return true;
 }
 
+
+bool MaxDomeII::OnSetTicksPerTurn(double value)
+{
+    int error;
+    int nRetry = 3;
+
+    if (value < 100 || value > 2000)
+    {
+        TicksPerTurnNP.s = IPS_ALERT;
+        IDSetNumber(&TicksPerTurnNP, "Invalid Ticks Per Turn");
+        return false;
+    }
+
+    while (nRetry)
+    {
+        error = driver.SetTicksPerTurn(value);
+        handle_driver_error(&error, &nRetry);
+    }
+    if (error < 0)
+    {
+        LOGF_ERROR("MAX DOME II: %s", ErrorMessages[-error]);
+        TicksPerTurnNP.s = IPS_ALERT;
+        IDSetNumber(&TicksPerTurnNP, nullptr);
+        return false;
+    }
+
+    char cLog[255];
+    sprintf(cLog, "New Ticks Per Turn set: %lf", value);
+    nTicksPerTurn = value;
+    nHomeTicks = floor(0.5 + nHomeAzimuth * nTicksPerTurn / 360.0); // Calculate Home ticks again
+    TicksPerTurnNP.s = IPS_OK;
+    TicksPerTurnNP.np[0].value = value;
+    IDSetNumber(&TicksPerTurnNP, "%s", cLog);
+    return true;
+}
+
+
+bool MaxDomeII::OnSetHomeAzimuth(double value)
+{
+    if (value < 0 || value > 360)
+    {
+        HomeAzimuthNP.s = IPS_ALERT;
+        IDSetNumber(&HomeAzimuthNP, "Invalid home azimuth");
+        return false;
+    }
+
+    char cLog[255];
+    sprintf(cLog, "New home azimuth set: %lf", value);
+    nHomeAzimuth = value;
+    nHomeTicks = floor(0.5 + nHomeAzimuth * nTicksPerTurn / 360.0);
+    HomeAzimuthNP.s = IPS_OK;
+    HomeAzimuthNP.np[0].value = value;
+    IDSetNumber(&HomeAzimuthNP, "%s", cLog);
+    return true;
+}
+
+
+bool MaxDomeII::OnSetWatchdog(double value)
+{
+    if (value < 0 || value > 3600)
+    {
+        WatchDogNP.s = IPS_ALERT;
+        IDSetNumber(&WatchDogNP, "Invalid watch dog time");
+        return false;
+    }
+
+    char cLog[255];
+    sprintf(cLog, "New watch dog set: %lf", value);
+    WatchDogNP.s = IPS_OK;
+    WatchDogNP.np[0].value = value;
+    IDSetNumber(&WatchDogNP, "%s", cLog);
+    return true;
+}
+
+
+bool MaxDomeII::OnSetParkPosition(double value)
+{
+    if (value < 0 || value >= 360)
+    {
+        ShutterOperationAzimuthNP.s = IPS_ALERT;
+        IDSetNumber(&ShutterOperationAzimuthNP, "Invalid shutter operation azimuth position");
+
+        return false;
+    }
+
+    IPState error = ConfigurePark(nCloseShutterBeforePark, value);
+
+    if (error == IPS_OK)
+    {
+        nParkPosition                         = value;
+        ShutterOperationAzimuthNP.s           = IPS_OK;
+        ShutterOperationAzimuthNP.np[0].value = value;
+        IDSetNumber(&ShutterOperationAzimuthNP, "New shutter operation azimuth set");
+    }
+    else
+    {
+        ShutterOperationAzimuthNP.s = IPS_ALERT;
+        IDSetNumber(&ShutterOperationAzimuthNP, "%s", ErrorMessages[-error]);
+    }
+
+    return true;
+}
+
 /**************************************************************************************
 **
 ***************************************************************************************/
@@ -581,149 +685,88 @@ bool MaxDomeII::ISNewNumber(const char *dev, const char *name, double values[], 
 
     nTimeSinceLastCommunication = 0;
 
-    // ===================================
     // TicksPerTurn
-    // ===================================
     if (!strcmp(name, TicksPerTurnNP.name))
     {
-        double nVal;
-        char cLog[255];
-        int error;
-        int nRetry = 3;
-
         if (IUUpdateNumber(&TicksPerTurnNP, values, names, n) < 0)
             return false;
-
-        nVal = values[0];
-        if (nVal >= 100 && nVal <= 2000)
-        {
-            while (nRetry)
-            {
-                error = driver.SetTicksPerTurn(nVal);
-                handle_driver_error(&error, &nRetry);
-            }
-            if (error >= 0)
-            {
-                sprintf(cLog, "New Ticks Per Turn set: %lf", nVal);
-                nTicksPerTurn    = nVal;
-                nHomeTicks       = floor(0.5 + nHomeAzimuth * nTicksPerTurn / 360.0); // Calculate Home ticks again
-                TicksPerTurnNP.s = IPS_OK;
-                TicksPerTurnNP.np[0].value = nVal;
-                IDSetNumber(&TicksPerTurnNP, "%s", cLog);
-                return true;
-            }
-            else
-            {
-                LOGF_ERROR("MAX DOME II: %s", ErrorMessages[-error]);
-                TicksPerTurnNP.s = IPS_ALERT;
-                IDSetNumber(&TicksPerTurnNP, nullptr);
-            }
-
-            return false;
-        }
-
-        // Incorrect value.
-        TicksPerTurnNP.s = IPS_ALERT;
-        IDSetNumber(&TicksPerTurnNP, "Invalid Ticks Per Turn");
-
-        return false;
+        return OnSetTicksPerTurn(values[0]);
     }
 
-    // ===================================
     // HomeAzimuth
-    // ===================================
     if (!strcmp(name, HomeAzimuthNP.name))
     {
-        double nVal;
-        char cLog[255];
-
         if (IUUpdateNumber(&HomeAzimuthNP, values, names, n) < 0)
             return false;
-
-        nVal = values[0];
-        if (nVal >= 0 && nVal <= 360)
-        {
-            sprintf(cLog, "New home azimuth set: %lf", nVal);
-            nHomeAzimuth              = nVal;
-            nHomeTicks                = floor(0.5 + nHomeAzimuth * nTicksPerTurn / 360.0);
-            HomeAzimuthNP.s           = IPS_OK;
-            HomeAzimuthNP.np[0].value = nVal;
-            IDSetNumber(&HomeAzimuthNP, "%s", cLog);
-            return true;
-        }
-        // Incorrect value.
-        HomeAzimuthNP.s = IPS_ALERT;
-        IDSetNumber(&HomeAzimuthNP, "Invalid home azimuth");
-
-        return false;
+        return OnSetHomeAzimuth(values[0]);
     }
 
-    // ===================================
     // Watch dog
-    // ===================================
     if (!strcmp(name, WatchDogNP.name))
     {
-        double nVal;
-        char cLog[255];
-
         if (IUUpdateNumber(&WatchDogNP, values, names, n) < 0)
             return false;
-
-        nVal = values[0];
-        if (nVal >= 0 && nVal <= 3600)
-        {
-            sprintf(cLog, "New watch dog set: %lf", nVal);
-            WatchDogNP.s           = IPS_OK;
-            WatchDogNP.np[0].value = nVal;
-            IDSetNumber(&WatchDogNP, "%s", cLog);
-            return true;
-        }
-        // Incorrect value.
-        WatchDogNP.s = IPS_ALERT;
-        IDSetNumber(&WatchDogNP, "Invalid watch dog time");
-
-        return false;
+        return OnSetWatchdog(values[0]);
     }
 
-    // ===================================
     // Shutter operation azimuth
-    // ===================================
     if (!strcmp(name, ShutterOperationAzimuthNP.name))
     {
-        double nVal;
-        IPState error;
-
         if (IUUpdateNumber(&ShutterOperationAzimuthNP, values, names, n) < 0)
             return false;
-
-        nVal = values[0];
-        if (nVal >= 0 && nVal < 360)
-        {
-            error = ConfigurePark(nCloseShutterBeforePark, nVal);
-
-            if (error == IPS_OK)
-            {
-                nParkPosition                         = nVal;
-                ShutterOperationAzimuthNP.s           = IPS_OK;
-                ShutterOperationAzimuthNP.np[0].value = nVal;
-                IDSetNumber(&ShutterOperationAzimuthNP, "New shutter operation azimuth set");
-            }
-            else
-            {
-                ShutterOperationAzimuthNP.s = IPS_ALERT;
-                IDSetNumber(&ShutterOperationAzimuthNP, "%s", ErrorMessages[-error]);
-            }
-
-            return true;
-        }
-        // Incorrect value.
-        ShutterOperationAzimuthNP.s = IPS_ALERT;
-        IDSetNumber(&ShutterOperationAzimuthNP, "Invalid shutter operation azimuth position");
-
-        return false;
+        return OnSetParkPosition(values[0]);
     }
 
     return INDI::Dome::ISNewNumber(dev, name, values, names, n);
+}
+
+bool MaxDomeII::OnHomeSwitch()
+{
+    int error;
+    int nRetry = 3;
+
+    while (nRetry)
+    {
+        error = driver.HomeAzimuth();
+        handle_driver_error(&error, &nRetry);
+    }
+    nTimeSinceAzimuthStart = 0;
+    nTargetAzimuth = -1;
+    if (error)
+    {
+        LOGF_ERROR("Error Homing Azimuth (%s).", ErrorMessages[-error]);
+        HomeSP.s = IPS_ALERT;
+        IDSetSwitch(&HomeSP, "Error Homing Azimuth");
+        return false;
+    }
+    HomeSP.s = IPS_BUSY;
+    IDSetSwitch(&HomeSP, "Homing dome");
+
+    return true;
+}
+
+bool MaxDomeII::OnSetShutterConflict(int nCSBP)
+{
+    int error = ConfigurePark(nCSBP, nParkPosition);
+
+    if (error == IPS_OK)
+    {
+        ShutterConflictSP.s = IPS_OK;
+        IDSetSwitch(&ShutterConflictSP, "New shutter operation conflict set");
+    }
+    else
+    {
+        ShutterConflictSP.s = IPS_ALERT;
+        IDSetSwitch(&ShutterConflictSP, "%s", ErrorMessages[-error]);
+    }
+    return true;
+}
+
+bool MaxDomeII::OnSetShutterOpeningMode()
+{
+    ShutterModeSP.s = IPS_OK;
+    IDSetSwitch(&ShutterModeSP, "Shutter opening mode set");
+    return true;
 }
 
 /**************************************************************************************
@@ -737,68 +780,24 @@ bool MaxDomeII::ISNewSwitch(const char *dev, const char *name, ISState *states, 
 
     nTimeSinceLastCommunication = 0;
 
-    // ===================================
     // Home
-    // ===================================
-    if (!strcmp(name, HomeSP.name))
-    {
+    if (!strcmp(name, HomeSP.name)) {
         if (IUUpdateSwitch(&HomeSP, states, names, n) < 0)
             return false;
-
-        int error;
-        int nRetry = 3;
-
-        while (nRetry)
-        {
-            error = driver.HomeAzimuth();
-            handle_driver_error(&error, &nRetry);
-        }
-        nTimeSinceAzimuthStart = 0;
-        nTargetAzimuth         = -1;
-        if (error)
-        {
-            LOGF_ERROR("Error Homing Azimuth (%s).", ErrorMessages[-error]);
-            HomeSP.s = IPS_ALERT;
-            IDSetSwitch(&HomeSP, "Error Homing Azimuth");
-            return false;
-        }
-        HomeSP.s = IPS_BUSY;
-        IDSetSwitch(&HomeSP, "Homing dome");
-
-        return true;
+        return OnHomeSwitch();
     }
 
-    // ===================================
     // Conflict on Shutter operation
-    // ===================================
-    if (!strcmp(name, ShutterConflictSP.name))
-    {
+    if (!strcmp(name, ShutterConflictSP.name)) {
         if (IUUpdateSwitch(&ShutterConflictSP, states, names, n) < 0)
             return false;
-
-        int nCSBP = ShutterConflictS[0].s == ISS_ON ? 1 : 0;
-        int error = ConfigurePark(nCSBP, nParkPosition);
-
-        if (error == IPS_OK)
-        {
-            ShutterConflictSP.s = IPS_OK;
-            IDSetSwitch(&ShutterConflictSP, "New shutter operation conflict set");
-        }
-        else
-        {
-            ShutterConflictSP.s = IPS_ALERT;
-            IDSetSwitch(&ShutterConflictSP, "%s", ErrorMessages[-error]);
-        }
-        return true;
+        return OnSetShutterConflict(ShutterConflictS[0].s == ISS_ON ? 1 : 0);
     }
 
     if (!strcmp(name, ShutterModeSP.name)) {
         if (IUUpdateSwitch(&ShutterModeSP, states, names, n) < 0)
             return false;
-
-        ShutterModeSP.s = IPS_OK;
-        IDSetSwitch(&ShutterModeSP, "Shutter opening mode set");
-        return true;
+        return OnSetShutterOpeningMode();
     }
 
     return INDI::Dome::ISNewSwitch(dev, name, states, names, n);

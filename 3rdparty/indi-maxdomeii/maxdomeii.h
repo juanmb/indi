@@ -108,6 +108,13 @@ class MaxDomeII : public INDI::Dome
     double prev_az, prev_alt;
 
     bool SetupParms();
+    bool OnSetTicksPerTurn(double value);
+    bool OnSetHomeAzimuth(double value);
+    bool OnSetWatchdog(double value);
+    bool OnSetParkPosition(double value);
+    bool OnHomeSwitch();
+    bool OnSetShutterConflict(int nCSBP);
+    bool OnSetShutterOpeningMode();
 
     MaxDomeIIDriver driver;
 };
