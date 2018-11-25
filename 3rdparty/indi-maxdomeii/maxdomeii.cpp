@@ -85,7 +85,7 @@ MaxDomeII::MaxDomeII()
     nTimeSinceLastCommunication = 0;
 
     SetDomeCapability(DOME_CAN_ABORT | DOME_CAN_ABS_MOVE | DOME_HAS_SHUTTER
-            | DOME_CAN_PARK);
+                      | DOME_CAN_PARK);
 
     setVersion(INDI_MAXDOMEII_VERSION_MAJOR, INDI_MAXDOMEII_VERSION_MINOR);
 }
@@ -134,34 +134,34 @@ bool MaxDomeII::initProperties()
     // Ticks per turn
     IUFillNumber(&TicksPerTurnN[0], "TICKS_PER_TURN", "Ticks per turn", "%5.2f", 100., 2000., 0., nTicksPerTurn);
     IUFillNumberVector(&TicksPerTurnNP, TicksPerTurnN, NARRAY(TicksPerTurnN), getDeviceName(),
-            "TICKS_PER_TURN", "Ticks per turn", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
+                       "TICKS_PER_TURN", "Ticks per turn", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
 
     // Home azimuth
     IUFillNumber(&HomeAzimuthN[0], "HOME_AZIMUTH", "Home azimuth", "%5.2f", 0., 360., 0., nHomeAzimuth);
     IUFillNumberVector(&HomeAzimuthNP, HomeAzimuthN, NARRAY(HomeAzimuthN), getDeviceName(),
-            "HOME_AZIMUTH", "Home azimuth", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
+                       "HOME_AZIMUTH", "Home azimuth", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
 
     // Park on shutter
     IUFillSwitch(&ParkOnShutterS[0], "MOVE", "Move", ISS_ON);
     IUFillSwitch(&ParkOnShutterS[1], "NO_MOVE", "No move", ISS_OFF);
     IUFillSwitchVector(&ParkOnShutterSP, ParkOnShutterS, NARRAY(ParkOnShutterS), getDeviceName(),
-            "PARK_ON_SHUTTER", "Park when operating shutter", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+                       "PARK_ON_SHUTTER", "Park when operating shutter", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
     // Shutter mode
     IUFillSwitch(&ShutterModeS[0], "FULL", "Open full", ISS_ON);
     IUFillSwitch(&ShutterModeS[1], "UPPER", "Open upper only", ISS_OFF);
     IUFillSwitchVector(&ShutterModeSP, ShutterModeS, NARRAY(ShutterModeS), getDeviceName(),
-            "SHUTTER_MODE", "Shutter open mode", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+                       "SHUTTER_MODE", "Shutter open mode", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
     // Home - Home command
     IUFillSwitch(&HomeS[0], "HOME", "Home", ISS_OFF);
     IUFillSwitchVector(&HomeSP, HomeS, NARRAY(HomeS), getDeviceName(),
-            "HOME_MOTION", "Home dome", MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 0, IPS_IDLE);
+                       "HOME_MOTION", "Home dome", MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 0, IPS_IDLE);
 
     // Watch Dog
     IUFillNumber(&WatchDogN[0], "WATCH_DOG_TIME", "Watch dog time", "%5.2f", 0., 3600., 0., 0.);
     IUFillNumberVector(&WatchDogNP, WatchDogN, NARRAY(WatchDogN), getDeviceName(),
-            "WATCH_DOG_TIME_SET", "Watch dog time (seconds)", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
+                       "WATCH_DOG_TIME_SET", "Watch dog time (seconds)", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
 
     SetParkDataType(PARK_AZ);
     addAuxControls();
@@ -176,8 +176,7 @@ bool MaxDomeII::updateProperties()
 {
     INDI::Dome::updateProperties();
 
-    if (isConnected())
-    {
+    if (isConnected()) {
         defineNumber(&HomeAzimuthNP);
         defineNumber(&TicksPerTurnNP);
         defineSwitch(&ParkOnShutterSP);
@@ -186,9 +185,7 @@ bool MaxDomeII::updateProperties()
         defineNumber(&WatchDogNP);
 
         SetupParms();
-    }
-    else
-    {
+    } else {
         deleteProperty(HomeAzimuthNP.name);
         deleteProperty(TicksPerTurnNP.name);
         deleteProperty(ParkOnShutterSP.name);
@@ -241,219 +238,185 @@ void MaxDomeII::TimerHit()
 
     // Watch dog
     nTimeSinceLastCommunication++;
-    if (WatchDogNP.np[0].value > 0 && WatchDogNP.np[0].value <= nTimeSinceLastCommunication)
-    {
+    if (WatchDogNP.np[0].value > 0 && WatchDogNP.np[0].value <= nTimeSinceLastCommunication) {
         // Close Shutter if it is not
-        if (shutterSt != SS_CLOSED)
-        {
+        if (shutterSt != SS_CLOSED) {
             DomeShutterSP.s = ControlShutter(SHUTTER_CLOSE);
             IDSetSwitch(&DomeShutterSP, "Closing shutter due to watch dog");
         }
     }
 
-    if (getWeatherState() == IPS_ALERT)
-    {
+    if (getWeatherState() == IPS_ALERT) {
         // Close Shutter if it is not
-        if (shutterSt != SS_CLOSED)
-        {
+        if (shutterSt != SS_CLOSED) {
             DomeShutterSP.s = ControlShutter(SHUTTER_CLOSE);
             IDSetSwitch(&DomeShutterSP, "Closing shutter due to weather conditions");
         }
     }
 
-    if (!nError)
-    {
+    if (!nError) {
         // Shutter
-        switch (shutterSt)
-        {
-            case SS_CLOSED:
-                if (DomeShutterS[1].s == ISS_ON) // Close Shutter
-                {
-                    if (DomeShutterSP.s == IPS_BUSY || DomeShutterSP.s == IPS_ALERT)
-                    {
-                        DomeShutterSP.s        = IPS_OK; // Shutter close movement ends.
-                        nTimeSinceShutterStart = -1;
-                        IDSetSwitch(&DomeShutterSP, "Shutter is closed");
+        switch (shutterSt) {
+        case SS_CLOSED:
+            if (DomeShutterS[1].s == ISS_ON) { // Close Shutter
+                if (DomeShutterSP.s == IPS_BUSY || DomeShutterSP.s == IPS_ALERT) {
+                    DomeShutterSP.s        = IPS_OK; // Shutter close movement ends.
+                    nTimeSinceShutterStart = -1;
+                    IDSetSwitch(&DomeShutterSP, "Shutter is closed");
+                }
+            } else {
+                if (nTimeSinceShutterStart >= 0) {
+                    // A movement has started. Warn but don't change
+                    if (nTimeSinceShutterStart >= 4) {
+                        DomeShutterSP.s = IPS_ALERT; // Shutter close movement ends.
+                        IDSetSwitch(&DomeShutterSP, "Shutter still closed");
                     }
-                }
-                else
-                {
-                    if (nTimeSinceShutterStart >= 0)
-                    { // A movement has started. Warn but don't change
-                        if (nTimeSinceShutterStart >= 4)
-                        {
-                            DomeShutterSP.s = IPS_ALERT; // Shutter close movement ends.
-                            IDSetSwitch(&DomeShutterSP, "Shutter still closed");
-                        }
-                    }
-                    else
-                    { // For some reason (manual operation?) the shutter has closed
-                        DomeShutterSP.s   = IPS_IDLE;
-                        DomeShutterS[1].s = ISS_ON;
-                        DomeShutterS[0].s = ISS_OFF;
-                        IDSetSwitch(&DomeShutterSP, "Unexpected shutter closed");
-                    }
-                }
-                break;
-            case SS_OPENING:
-                if (DomeShutterS[0].s == ISS_OFF) // not opening Shutter
-                {                                 // For some reason the shutter is opening (manual operation?)
-                    DomeShutterSP.s   = IPS_ALERT;
-                    DomeShutterS[1].s = ISS_OFF;
-                    DomeShutterS[0].s = ISS_OFF;
-                    IDSetSwitch(&DomeShutterSP, "Unexpected shutter opening");
-                }
-                else if (nTimeSinceShutterStart < 0)
-                { // For some reason the shutter is opening (manual operation?)
-                    DomeShutterSP.s        = IPS_ALERT;
-                    nTimeSinceShutterStart = 0;
-                    IDSetSwitch(&DomeShutterSP, "Unexpected shutter opening");
-                }
-                else if (DomeShutterSP.s == IPS_ALERT)
-                { // The alert has corrected
-                    DomeShutterSP.s = IPS_BUSY;
-                    IDSetSwitch(&DomeShutterSP, "Shutter is opening");
-                }
-                break;
-            case SS_OPEN:
-                if (DomeShutterS[0].s == ISS_ON) // Open Shutter
-                {
-                    if (DomeShutterSP.s == IPS_BUSY || DomeShutterSP.s == IPS_ALERT)
-                    {
-                        DomeShutterSP.s        = IPS_OK; // Shutter open movement ends.
-                        nTimeSinceShutterStart = -1;
-                        IDSetSwitch(&DomeShutterSP, "Shutter is open");
-                    }
-                }
-                else
-                {
-                    if (nTimeSinceShutterStart >= 0)
-                    { // A movement has started. Warn but don't change
-                        if (nTimeSinceShutterStart >= 4)
-                        {
-                            DomeShutterSP.s = IPS_ALERT; // Shutter open movement alert.
-                            IDSetSwitch(&DomeShutterSP, "Shutter still open");
-                        }
-                    }
-                    else
-                    { // For some reason (manual operation?) the shutter has open
-                        DomeShutterSP.s   = IPS_IDLE;
-                        DomeShutterS[1].s = ISS_ON;
-                        DomeShutterS[0].s = ISS_OFF;
-                        IDSetSwitch(&DomeShutterSP, "Unexpected shutter open");
-                    }
-                }
-                break;
-            case SS_CLOSING:
-                if (DomeShutterS[1].s == ISS_OFF) // Not closing Shutter
-                {                                 // For some reason the shutter is closing (manual operation?)
-                    DomeShutterSP.s   = IPS_ALERT;
+                } else {
+                    // For some reason (manual operation?) the shutter has closed
+                    DomeShutterSP.s   = IPS_IDLE;
                     DomeShutterS[1].s = ISS_ON;
                     DomeShutterS[0].s = ISS_OFF;
-                    IDSetSwitch(&DomeShutterSP, "Unexpected shutter closing");
+                    IDSetSwitch(&DomeShutterSP, "Unexpected shutter closed");
                 }
-                else if (nTimeSinceShutterStart < 0)
-                { // For some reason the shutter is opening (manual operation?)
-                    DomeShutterSP.s        = IPS_ALERT;
-                    nTimeSinceShutterStart = 0;
-                    IDSetSwitch(&DomeShutterSP, "Unexpected shutter closing");
-                }
-                else if (DomeShutterSP.s == IPS_ALERT)
-                { // The alert has corrected
-                    DomeShutterSP.s = IPS_BUSY;
-                    IDSetSwitch(&DomeShutterSP, "Shutter is closing");
-                }
-                break;
-            case SS_ERROR:
+            }
+            break;
+        case SS_OPENING:
+            if (DomeShutterS[0].s == ISS_OFF) { // not opening Shutter
+                // For some reason the shutter is opening (manual operation?)
                 DomeShutterSP.s   = IPS_ALERT;
                 DomeShutterS[1].s = ISS_OFF;
                 DomeShutterS[0].s = ISS_OFF;
-                IDSetSwitch(&DomeShutterSP, "Shutter error");
-                break;
-            case SS_ABORTED:
-            default:
-                if (nTimeSinceShutterStart >= 0)
-                {
-                    DomeShutterSP.s        = IPS_ALERT; // Shutter movement aborted.
-                    DomeShutterS[1].s      = ISS_OFF;
-                    DomeShutterS[0].s      = ISS_OFF;
+                IDSetSwitch(&DomeShutterSP, "Unexpected shutter opening");
+            } else if (nTimeSinceShutterStart < 0) {
+                // For some reason the shutter is opening (manual operation?)
+                DomeShutterSP.s        = IPS_ALERT;
+                nTimeSinceShutterStart = 0;
+                IDSetSwitch(&DomeShutterSP, "Unexpected shutter opening");
+            } else if (DomeShutterSP.s == IPS_ALERT) {
+                // The alert has corrected
+                DomeShutterSP.s = IPS_BUSY;
+                IDSetSwitch(&DomeShutterSP, "Shutter is opening");
+            }
+            break;
+        case SS_OPEN:
+            if (DomeShutterS[0].s == ISS_ON) { // Open Shutter
+                if (DomeShutterSP.s == IPS_BUSY || DomeShutterSP.s == IPS_ALERT) {
+                    DomeShutterSP.s        = IPS_OK; // Shutter open movement ends.
                     nTimeSinceShutterStart = -1;
-                    IDSetSwitch(&DomeShutterSP, "Unknown shutter status");
+                    IDSetSwitch(&DomeShutterSP, "Shutter is open");
                 }
-                break;
+            } else {
+                if (nTimeSinceShutterStart >= 0) {
+                    // A movement has started. Warn but don't change
+                    if (nTimeSinceShutterStart >= 4) {
+                        DomeShutterSP.s = IPS_ALERT; // Shutter open movement alert.
+                        IDSetSwitch(&DomeShutterSP, "Shutter still open");
+                    }
+                } else {
+                    // For some reason (manual operation?) the shutter has open
+                    DomeShutterSP.s   = IPS_IDLE;
+                    DomeShutterS[1].s = ISS_ON;
+                    DomeShutterS[0].s = ISS_OFF;
+                    IDSetSwitch(&DomeShutterSP, "Unexpected shutter open");
+                }
+            }
+            break;
+        case SS_CLOSING:
+            if (DomeShutterS[1].s == ISS_OFF) { // Not closing Shutter
+                // For some reason the shutter is closing (manual operation?)
+                DomeShutterSP.s   = IPS_ALERT;
+                DomeShutterS[1].s = ISS_ON;
+                DomeShutterS[0].s = ISS_OFF;
+                IDSetSwitch(&DomeShutterSP, "Unexpected shutter closing");
+            } else if (nTimeSinceShutterStart < 0) {
+                // For some reason the shutter is opening (manual operation?)
+                DomeShutterSP.s        = IPS_ALERT;
+                nTimeSinceShutterStart = 0;
+                IDSetSwitch(&DomeShutterSP, "Unexpected shutter closing");
+            } else if (DomeShutterSP.s == IPS_ALERT) {
+                // The alert has corrected
+                DomeShutterSP.s = IPS_BUSY;
+                IDSetSwitch(&DomeShutterSP, "Shutter is closing");
+            }
+            break;
+        case SS_ERROR:
+            DomeShutterSP.s   = IPS_ALERT;
+            DomeShutterS[1].s = ISS_OFF;
+            DomeShutterS[0].s = ISS_OFF;
+            IDSetSwitch(&DomeShutterSP, "Shutter error");
+            break;
+        case SS_ABORTED:
+        default:
+            if (nTimeSinceShutterStart >= 0) {
+                DomeShutterSP.s        = IPS_ALERT; // Shutter movement aborted.
+                DomeShutterS[1].s      = ISS_OFF;
+                DomeShutterS[0].s      = ISS_OFF;
+                nTimeSinceShutterStart = -1;
+                IDSetSwitch(&DomeShutterSP, "Unknown shutter status");
+            }
+            break;
         }
 
         // Azimuth
         nAz = TicksToAzimuth(nCurrentTicks);
-        if (DomeAbsPosN[0].value != nAz)    // Only refresh position if it has changed
-        {
+        if (DomeAbsPosN[0].value != nAz) {  // Only refresh position if it has changed
             DomeAbsPosN[0].value = nAz;
             IDSetNumber(&DomeAbsPosNP, nullptr);
         }
 
-        switch (nAzimuthStatus)
-        {
-            case AS_IDLE:
-            case AS_IDLE2:
-                if (nTimeSinceAzimuthStart > 3)
-                {
-                    if (nTargetAzimuth >= 0 &&
-                        AzimuthDistance(nTargetAzimuth, nCurrentTicks) > 3) // Maximum difference allowed: 3 ticks
-                    {
-                        DomeAbsPosNP.s         = IPS_ALERT;
-                        nTimeSinceAzimuthStart = -1;
-                        IDSetNumber(&DomeAbsPosNP, "Could not position right");
-                    }
-                    else
-                    { // Succesfull end of movement
-                        if (DomeAbsPosNP.s != IPS_OK)
-                        {
-			    int domeState = getDomeState();
-			    if (domeState == DOME_PARKING) {
-				    SetParked(true);
-			    } else if (domeState == DOME_UNPARKING) {
-				    SetParked(false);
-				    LOG_INFO("Dome is unparked");
-			    } else {
-				    setDomeState(DOME_SYNCED);
-				    LOG_INFO("Dome is on target position");
-			    }
-			    nTimeSinceAzimuthStart = -1;
-                        }
-                        if (HomeS[0].s == ISS_ON)
-                        {
-                            HomeS[0].s             = ISS_OFF;
-                            HomeSP.s               = IPS_OK;
-                            nTimeSinceAzimuthStart = -1;
-                            IDSetSwitch(&HomeSP, "Dome is homed");
-                        }
-                    }
-                }
-                break;
-            case AS_MOVING_WE:
-            case AS_MOVING_EW:
-                if (nTimeSinceAzimuthStart < 0)
-                {
-                    nTimeSinceAzimuthStart = 0;
-                    nTargetAzimuth         = -1;
-                    DomeAbsPosNP.s         = IPS_ALERT;
-                    IDSetNumber(&DomeAbsPosNP, "Unexpected dome moving");
-                }
-                break;
-            case AS_ERROR:
-                if (nTimeSinceAzimuthStart >= 0)
-                {
+        switch (nAzimuthStatus) {
+        case AS_IDLE:
+        case AS_IDLE2:
+            if (nTimeSinceAzimuthStart > 3) {
+                if (nTargetAzimuth >= 0 &&
+                        AzimuthDistance(nTargetAzimuth, nCurrentTicks) > 3) { // Maximum difference allowed: 3 ticks
                     DomeAbsPosNP.s         = IPS_ALERT;
                     nTimeSinceAzimuthStart = -1;
-                    nTargetAzimuth         = -1;
-                    IDSetNumber(&DomeAbsPosNP, "Dome Error");
+                    IDSetNumber(&DomeAbsPosNP, "Could not position right");
+                } else {
+                    // Succesfull end of movement
+                    if (DomeAbsPosNP.s != IPS_OK) {
+                        int domeState = getDomeState();
+                        if (domeState == DOME_PARKING) {
+                            SetParked(true);
+                        } else if (domeState == DOME_UNPARKING) {
+                            SetParked(false);
+                            LOG_INFO("Dome is unparked");
+                        } else {
+                            setDomeState(DOME_SYNCED);
+                            LOG_INFO("Dome is on target position");
+                        }
+                        nTimeSinceAzimuthStart = -1;
+                    }
+                    if (HomeS[0].s == ISS_ON) {
+                        HomeS[0].s             = ISS_OFF;
+                        HomeSP.s               = IPS_OK;
+                        nTimeSinceAzimuthStart = -1;
+                        IDSetSwitch(&HomeSP, "Dome is homed");
+                    }
                 }
-            default:
-                break;
+            }
+            break;
+        case AS_MOVING_WE:
+        case AS_MOVING_EW:
+            if (nTimeSinceAzimuthStart < 0) {
+                nTimeSinceAzimuthStart = 0;
+                nTargetAzimuth         = -1;
+                DomeAbsPosNP.s         = IPS_ALERT;
+                IDSetNumber(&DomeAbsPosNP, "Unexpected dome moving");
+            }
+            break;
+        case AS_ERROR:
+            if (nTimeSinceAzimuthStart >= 0) {
+                DomeAbsPosNP.s         = IPS_ALERT;
+                nTimeSinceAzimuthStart = -1;
+                nTargetAzimuth         = -1;
+                IDSetNumber(&DomeAbsPosNP, "Dome Error");
+            }
+        default:
+            break;
         }
-    }
-    else
-    {
+    } else {
         LOGF_DEBUG("Error: %s. Please reconnect and try again.", ErrorMessages[-nError]);
         return;
     }
@@ -472,15 +435,12 @@ IPState MaxDomeII::MoveAbs(double newAZ)
     currAZ = DomeAbsPosN[0].value;
 
     // Take the shortest path
-    if (newAZ > currAZ)
-    {
+    if (newAZ > currAZ) {
         if (newAZ - currAZ > 180.0)
             nDir = MAXDOMEII_WE_DIR;
         else
             nDir = MAXDOMEII_EW_DIR;
-    }
-    else
-    {
+    } else {
         if (currAZ - newAZ > 180.0)
             nDir = MAXDOMEII_EW_DIR;
         else
@@ -489,8 +449,7 @@ IPState MaxDomeII::MoveAbs(double newAZ)
 
     newPos = AzimuthToTicks(newAZ);
 
-    while (nRetry)
-    {
+    while (nRetry) {
         error = driver.GotoAzimuth(nDir, newPos);
         handle_driver_error(&error, &nRetry);
     }
@@ -510,16 +469,14 @@ IPState MaxDomeII::Move(DomeDirection dir, DomeMotionCommand operation)
     int error;
     int nRetry = 3;
 
-    if (operation == MOTION_START)
-    {
+    if (operation == MOTION_START) {
         LOGF_DEBUG("Move dir=%d", dir);
         double currAZ = DomeAbsPosN[0].value;
         double newAZ = currAZ > 180 ? currAZ - 180 : currAZ + 180;
         int newPos = AzimuthToTicks(newAZ);
         int nDir = dir ? MAXDOMEII_WE_DIR : MAXDOMEII_EW_DIR;
 
-        while (nRetry)
-        {
+        while (nRetry) {
             error = driver.GotoAzimuth(nDir, newPos);
             handle_driver_error(&error, &nRetry);
         }
@@ -530,12 +487,9 @@ IPState MaxDomeII::Move(DomeDirection dir, DomeMotionCommand operation)
         nTargetAzimuth = newPos;
         nTimeSinceAzimuthStart = 0; // Init movement timer
         return IPS_BUSY;
-    }
-    else
-    {
+    } else {
         LOG_DEBUG("Stop movement");
-        while (nRetry)
-        {
+        while (nRetry) {
             error = driver.AbortAzimuth();
             handle_driver_error(&error, &nRetry);
         }
@@ -556,14 +510,12 @@ bool MaxDomeII::Abort()
     int error  = 0;
     int nRetry = 3;
 
-    while (nRetry)
-    {
+    while (nRetry) {
         error = driver.AbortAzimuth();
         handle_driver_error(&error, &nRetry);
     }
 
-    while (nRetry)
-    {
+    while (nRetry) {
         error = driver.AbortShutter();
         handle_driver_error(&error, &nRetry);
     }
@@ -572,8 +524,7 @@ bool MaxDomeII::Abort()
     IDSetNumber(&DomeAbsPosNP, nullptr);
 
     // If we abort while in the middle of opening/closing shutter, alert.
-    if (DomeShutterSP.s == IPS_BUSY)
-    {
+    if (DomeShutterSP.s == IPS_BUSY) {
         DomeShutterSP.s = IPS_ALERT;
         IDSetSwitch(&DomeShutterSP, "Shutter operation aborted.");
         return false;
@@ -588,20 +539,17 @@ bool MaxDomeII::OnSetTicksPerTurn(double value)
     int error;
     int nRetry = 3;
 
-    if (value < 100 || value > 2000)
-    {
+    if (value < 100 || value > 2000) {
         TicksPerTurnNP.s = IPS_ALERT;
         IDSetNumber(&TicksPerTurnNP, "Invalid Ticks Per Turn");
         return false;
     }
 
-    while (nRetry)
-    {
+    while (nRetry) {
         error = driver.SetTicksPerTurn(value);
         handle_driver_error(&error, &nRetry);
     }
-    if (error < 0)
-    {
+    if (error < 0) {
         LOGF_ERROR("MAX DOME II: %s", ErrorMessages[-error]);
         TicksPerTurnNP.s = IPS_ALERT;
         IDSetNumber(&TicksPerTurnNP, nullptr);
@@ -621,8 +569,7 @@ bool MaxDomeII::OnSetTicksPerTurn(double value)
 
 bool MaxDomeII::OnSetHomeAzimuth(double value)
 {
-    if (value < 0 || value > 360)
-    {
+    if (value < 0 || value > 360) {
         HomeAzimuthNP.s = IPS_ALERT;
         IDSetNumber(&HomeAzimuthNP, "Invalid home azimuth");
         return false;
@@ -641,8 +588,7 @@ bool MaxDomeII::OnSetHomeAzimuth(double value)
 
 bool MaxDomeII::OnSetWatchdog(double value)
 {
-    if (value < 0 || value > 3600)
-    {
+    if (value < 0 || value > 3600) {
         WatchDogNP.s = IPS_ALERT;
         IDSetNumber(&WatchDogNP, "Invalid watch dog time");
         return false;
@@ -668,24 +614,21 @@ bool MaxDomeII::ISNewNumber(const char *dev, const char *name, double values[], 
     nTimeSinceLastCommunication = 0;
 
     // Ticks per turn
-    if (!strcmp(name, TicksPerTurnNP.name))
-    {
+    if (!strcmp(name, TicksPerTurnNP.name)) {
         if (IUUpdateNumber(&TicksPerTurnNP, values, names, n) < 0)
             return false;
         return OnSetTicksPerTurn(values[0]);
     }
 
     // Home azimuth
-    if (!strcmp(name, HomeAzimuthNP.name))
-    {
+    if (!strcmp(name, HomeAzimuthNP.name)) {
         if (IUUpdateNumber(&HomeAzimuthNP, values, names, n) < 0)
             return false;
         return OnSetHomeAzimuth(values[0]);
     }
 
     // Watch dog
-    if (!strcmp(name, WatchDogNP.name))
-    {
+    if (!strcmp(name, WatchDogNP.name)) {
         if (IUUpdateNumber(&WatchDogNP, values, names, n) < 0)
             return false;
         return OnSetWatchdog(values[0]);
@@ -699,15 +642,13 @@ bool MaxDomeII::OnHomeSwitch()
     int error;
     int nRetry = 3;
 
-    while (nRetry)
-    {
+    while (nRetry) {
         error = driver.HomeAzimuth();
         handle_driver_error(&error, &nRetry);
     }
     nTimeSinceAzimuthStart = 0;
     nTargetAzimuth = -1;
-    if (error)
-    {
+    if (error) {
         LOGF_ERROR("Error Homing Azimuth (%s).", ErrorMessages[-error]);
         HomeSP.s = IPS_ALERT;
         IDSetSwitch(&HomeSP, "Error Homing Azimuth");
@@ -724,13 +665,10 @@ bool MaxDomeII::OnSetParkOnShutter(int csbp)
     int pos = floor(0.5 + GetAxis1Park() * nTicksPerTurn / 360.0);
     int error = ConfigurePark(csbp, pos);
 
-    if (error == IPS_OK)
-    {
+    if (error == IPS_OK) {
         ParkOnShutterSP.s = IPS_OK;
         IDSetSwitch(&ParkOnShutterSP, "New shutter operation conflict set");
-    }
-    else
-    {
+    } else {
         ParkOnShutterSP.s = IPS_ALERT;
         IDSetSwitch(&ParkOnShutterSP, "%s", ErrorMessages[-error]);
     }
@@ -830,23 +768,22 @@ int MaxDomeII::AzimuthToTicks(double nAzimuth)
 int MaxDomeII::handle_driver_error(int *error, int *nRetry)
 {
     (*nRetry)--;
-    switch (*error)
-    {
-        case 0: // No error. Continue
-            *nRetry = 0;
-            break;
-        case -5: // can't connect
-            // This error can happen if port connection is lost, i.e. a usb-serial reconnection
-            // Reconnect
-            LOG_ERROR("MAX DOME II: Reconnecting ...");
-            Connect();
-            if (PortFD < 0)
-                *nRetry = 0; // Can't open the port. Don't retry anymore.
-            break;
+    switch (*error) {
+    case 0: // No error. Continue
+        *nRetry = 0;
+        break;
+    case -5: // can't connect
+        // This error can happen if port connection is lost, i.e. a usb-serial reconnection
+        // Reconnect
+        LOG_ERROR("MAX DOME II: Reconnecting ...");
+        Connect();
+        if (PortFD < 0)
+            *nRetry = 0; // Can't open the port. Don't retry anymore.
+        break;
 
-        default: // Do nothing in all other errors.
-            LOGF_ERROR("Error on command: (%s).", ErrorMessages[-*error]);
-            break;
+    default: // Do nothing in all other errors.
+        LOGF_ERROR("Error on command: (%s).", ErrorMessages[-*error]);
+        break;
     }
 
     return *nRetry;
@@ -860,20 +797,16 @@ IPState MaxDomeII::ConfigurePark(int csbp, int parkingPos)
     int error  = 0;
     int nRetry = 3;
 
-    while (nRetry)
-    {
+    while (nRetry) {
         error = driver.SetPark(csbp, parkingPos);
         handle_driver_error(&error, &nRetry);
     }
 
-    if (error >= 0)
-    {
+    if (error >= 0) {
         nCloseShutterBeforePark = csbp;
         LOGF_INFO("Close shutter before parking: %s", csbp ? "yes" : "no");
         LOGF_INFO("New park position set: %d ticks", parkingPos);
-    }
-    else
-    {
+    } else {
         LOGF_ERROR("MAX DOME II: %s", ErrorMessages[-error]);
         return IPS_ALERT;
     }
@@ -934,48 +867,38 @@ IPState MaxDomeII::ControlShutter(ShutterOperation operation)
     int error  = 0;
     int nRetry = 3;
 
-    if (operation == SHUTTER_CLOSE)
-    {
-        while (nRetry)
-        {
+    if (operation == SHUTTER_CLOSE) {
+        while (nRetry) {
             error = driver.CloseShutter();
             handle_driver_error(&error, &nRetry);
         }
         nTimeSinceShutterStart = 0; // Init movement timer
-        if (error)
-        {
+        if (error) {
             LOGF_ERROR("Error closing shutter (%s).", ErrorMessages[-error]);
             return IPS_ALERT;
         }
         return IPS_BUSY;
-    }
-    else
-    {
-        if (ShutterModeS[0].s == ISS_ON)
-        { // Open Shutter
-            while (nRetry)
-            {
+    } else {
+        if (ShutterModeS[0].s == ISS_ON) {
+            // Open Shutter
+            while (nRetry) {
                 error = driver.OpenShutter();
                 handle_driver_error(&error, &nRetry);
             }
             nTimeSinceShutterStart = 0; // Init movement timer
-            if (error)
-            {
+            if (error) {
                 LOGF_ERROR("Error opening shutter (%s).", ErrorMessages[-error]);
                 return IPS_ALERT;
             }
             return IPS_BUSY;
-        }
-        else
-        { // Open upper shutter only
-            while (nRetry)
-            {
+        } else {
+            // Open upper shutter only
+            while (nRetry) {
                 error = driver.OpenUpperShutterOnly();
                 handle_driver_error(&error, &nRetry);
             }
             nTimeSinceShutterStart = 0; // Init movement timer
-            if (error)
-            {
+            if (error) {
                 LOGF_ERROR("Error opening upper shutter only (%s).", ErrorMessages[-error]);
                 return IPS_ALERT;
             }

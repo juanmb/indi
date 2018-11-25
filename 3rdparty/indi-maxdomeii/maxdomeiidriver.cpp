@@ -57,14 +57,14 @@
 
 // Error messages
 const char *ErrorMessages[] = {
-	"Ok",                              // no error
-	"No response from MAX DOME",       // -1
-	"Invalid declared message length", // -2
-	"Message too short",               // -3
-	"Checksum error",                  // -4
-	"Could not send command",          // -5
-	"Response do not match command",   // -6
-	""
+    "Ok",                              // no error
+    "No response from MAX DOME",       // -1
+    "Invalid declared message length", // -2
+    "Message too short",               // -3
+    "Checksum error",                  // -4
+    "Could not send command",          // -5
+    "Response do not match command",   // -6
+    ""
 };
 
 char device_str[MAXINDIDEVICE] = "MaxDome II";
@@ -96,10 +96,10 @@ void MaxDomeIIDriver::SetDevice(const char *name)
 }
 
 /*
-	Opens serial port with proper configuration
+    Opens serial port with proper configuration
 
-	@param device String to device (/dev/ttyS0)
-	@return -1 if can't connect. File descriptor, otherwise.
+    @param device String to device (/dev/ttyS0)
+    @return -1 if can't connect. File descriptor, otherwise.
 */
 int MaxDomeIIDriver::Connect(const char *device)
 {
@@ -110,10 +110,10 @@ int MaxDomeIIDriver::Connect(const char *device)
 }
 
 /*
-	Inform Max Dome from a disconection and closes serial port
+    Inform Max Dome from a disconection and closes serial port
 
-	@param fd File descriptor
-	@return 0 Ok,
+    @param fd File descriptor
+    @return 0 Ok,
 */
 int MaxDomeIIDriver::Disconnect()
 {
@@ -124,30 +124,30 @@ int MaxDomeIIDriver::Disconnect()
 }
 
 /*
-	Calculates or checks the checksum
-	It ignores first byte
-	For security we limit the checksum calculation to BUFFER_SIZE length
+    Calculates or checks the checksum
+    It ignores first byte
+    For security we limit the checksum calculation to BUFFER_SIZE length
 
-	@param msg Pointer to unsigned char array with the message
-	@param len Length of the message
-	@return Checksum byte
+    @param msg Pointer to unsigned char array with the message
+    @param len Length of the message
+    @return Checksum byte
 */
 signed char computeChecksum(char *msg, int len)
 {
     char checksum = 0;
 
-    for (int i=1; i<len && i<BUFFER_SIZE; i++)
+    for (int i = 1; i < len && i < BUFFER_SIZE; i++)
         checksum -= msg[i];
 
     return checksum;
 }
 
 /*
-	Reads a response from MaxDome II
-	It verifies message sintax and checksum.
+    Reads a response from MaxDome II
+    It verifies message sintax and checksum.
     Read data is stored in MaxDomeIIDriver::buffer
 
-	@return
+    @return
       - Respose size if message is Ok
       - -1: no response or no start caracter found
       - -2: invalid declared message length
@@ -196,12 +196,12 @@ int MaxDomeIIDriver::ReadResponse()
 }
 
 /*
-	Send a command to MaxDome II
+    Send a command to MaxDome II
 
-	@param cmdId Command identifier code
-	@param payload Payload data
-	@param payloadLen Length of payload data
-	@return
+    @param cmdId Command identifier code
+    @param payload Payload data
+    @param payloadLen Length of payload data
+    @return
       -  0: command received by MAX DOME
       - -1: no response or no start caracter found
       - -2: invalid declared message length
@@ -216,7 +216,7 @@ int MaxDomeIIDriver::SendCommand(char cmdId, const char *payload, int payloadLen
     int nbytes;
     char errmsg[MAXRBUF];
     char cmd[BUFFER_SIZE];
-    char hexbuf[3*BUFFER_SIZE];
+    char hexbuf[3 * BUFFER_SIZE];
 
     cmd[0] = START_BYTE;
     cmd[1] = payloadLen + 2;
@@ -229,8 +229,7 @@ int MaxDomeIIDriver::SendCommand(char cmdId, const char *payload, int payloadLen
 
     tcflush(fd, TCIOFLUSH);
 
-    if ((err = tty_write(fd, cmd, 4 + payloadLen, &nbytes)) != TTY_OK)
-    {
+    if ((err = tty_write(fd, cmd, 4 + payloadLen, &nbytes)) != TTY_OK) {
         tty_error_msg(err, errmsg, MAXRBUF);
         LOG_ERROR(errmsg);
         return -5;
@@ -252,9 +251,9 @@ int MaxDomeIIDriver::SendCommand(char cmdId, const char *payload, int payloadLen
 }
 
 /*
-	Abort azimuth movement
+    Abort azimuth movement
 
-	@return Same as SendCommand
+    @return Same as SendCommand
 */
 int MaxDomeIIDriver::AbortAzimuth()
 {
@@ -263,9 +262,9 @@ int MaxDomeIIDriver::AbortAzimuth()
 }
 
 /*
-	Move until 'home' position is detected
+    Move until 'home' position is detected
 
-	@return Same as SendCommand
+    @return Same as SendCommand
 */
 int MaxDomeIIDriver::HomeAzimuth()
 {
@@ -274,11 +273,11 @@ int MaxDomeIIDriver::HomeAzimuth()
 }
 
 /*
-	Go to a new azimuth position
+    Go to a new azimuth position
 
-	@param nDir Direcction of the movement. 0 E to W. 1 W to E
-	@param nTicks Ticks from home position in E to W direction.
-	@return Same as SendCommand
+    @param nDir Direcction of the movement. 0 E to W. 1 W to E
+    @param nTicks Ticks from home position in E to W direction.
+    @return Same as SendCommand
 */
 int MaxDomeIIDriver::GotoAzimuth(int nDir, int nTicks)
 {
@@ -293,16 +292,16 @@ int MaxDomeIIDriver::GotoAzimuth(int nDir, int nTicks)
 }
 
 /*
-	Ask Max Dome status
+    Ask Max Dome status
 
-	@param shStatus Returns shutter status
-	@param azStatus Returns azimuth status
-	@param azimuthPos Returns azimuth current position (in ticks from home position)
-	@param homePos Returns last position where home was detected
-	@return Same as SendCommand
+    @param shStatus Returns shutter status
+    @param azStatus Returns azimuth status
+    @param azimuthPos Returns azimuth current position (in ticks from home position)
+    @param homePos Returns last position where home was detected
+    @return Same as SendCommand
 */
 int MaxDomeIIDriver::Status(ShStatus *shStatus, AzStatus *azStatus,
-        unsigned *azimuthPos, unsigned *homePos)
+                            unsigned *azimuthPos, unsigned *homePos)
 {
     int ret = SendCommand(STATUS_CMD, nullptr, 0);
     if (ret != 0) {
@@ -319,9 +318,9 @@ int MaxDomeIIDriver::Status(ShStatus *shStatus, AzStatus *azStatus,
 }
 
 /*
-	Ack comunication
+    Ack comunication
 
-	@return Same as SendCommand
+    @return Same as SendCommand
 */
 int MaxDomeIIDriver::Ack()
 {
@@ -330,13 +329,13 @@ int MaxDomeIIDriver::Ack()
 }
 
 /*
-	Set park coordinates and if need to park before to operating shutter
+    Set park coordinates and if need to park before to operating shutter
 
-	@param nParkOnShutter
+    @param nParkOnShutter
       - 0 operate shutter at any azimuth.
       - 1 go to park position before operating shutter
-	@param nTicks Ticks from home position in E to W direction.
-	@return Same as SendCommand
+    @param nTicks Ticks from home position in E to W direction.
+    @return Same as SendCommand
 */
 int MaxDomeIIDriver::SetPark(int nParkOnShutter, int nTicks)
 {
@@ -354,7 +353,7 @@ int MaxDomeIIDriver::SetPark(int nParkOnShutter, int nTicks)
     Set ticks per turn of the dome
 
     @param nTicks Ticks from home position in E to W direction.
-	@return Same as SendCommand
+    @return Same as SendCommand
  */
 int MaxDomeIIDriver::SetTicksPerTurn(int nTicks)
 {
@@ -374,9 +373,9 @@ int MaxDomeIIDriver::SetTicksPerTurn(int nTicks)
 ///////////////////////////////////////////////////////////////////////////
 
 /*
-	Opens the shutter fully
+    Opens the shutter fully
 
-	@return Same as SendCommand
+    @return Same as SendCommand
 */
 int MaxDomeIIDriver::OpenShutter()
 {
@@ -387,9 +386,9 @@ int MaxDomeIIDriver::OpenShutter()
 }
 
 /*
-	Opens the upper shutter only
+    Opens the upper shutter only
 
-	@return Same as SendCommand
+    @return Same as SendCommand
 */
 int MaxDomeIIDriver::OpenUpperShutterOnly()
 {
@@ -400,9 +399,9 @@ int MaxDomeIIDriver::OpenUpperShutterOnly()
 }
 
 /*
-	Close the shutter
+    Close the shutter
 
-	@return Same as SendCommand
+    @return Same as SendCommand
 */
 int MaxDomeIIDriver::CloseShutter()
 {
@@ -413,9 +412,9 @@ int MaxDomeIIDriver::CloseShutter()
 }
 
 /*
-	Abort shutter movement
+    Abort shutter movement
 
-	@return Same as SendCommand
+    @return Same as SendCommand
 */
 int MaxDomeIIDriver::AbortShutter()
 {
@@ -426,9 +425,9 @@ int MaxDomeIIDriver::AbortShutter()
 }
 
 /*
-	Exit shutter (?) Normally send at program exit
+    Exit shutter (?) Normally send at program exit
 
-	@return Same as SendCommand
+    @return Same as SendCommand
 */
 int MaxDomeIIDriver::ExitShutter()
 {

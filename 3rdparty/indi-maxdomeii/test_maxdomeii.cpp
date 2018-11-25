@@ -5,7 +5,7 @@
 TEST(MaxDomeIIDriver, hexDump)
 {
     char data[] = "abcd";
-    char out[(sizeof(data) - 1)*3];
+    char out[(sizeof(data) - 1) * 3];
 
     hexDump(out, data, sizeof(data) - 1);
     ASSERT_STREQ(out, "61 62 63 64");
