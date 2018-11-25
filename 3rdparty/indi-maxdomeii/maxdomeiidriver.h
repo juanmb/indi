@@ -26,8 +26,7 @@
 #define MAXDOMEII_WE_DIR 0x02
 
 // Azimuth motor status. When motor is idle, sometimes returns 0, sometimes 4. After connect, it returns 5
-enum AzStatus
-{
+enum AzStatus {
     AS_IDLE = 1,
     AS_MOVING_WE,
     AS_MOVING_EW,
@@ -36,8 +35,7 @@ enum AzStatus
 };
 
 // Shutter status
-enum ShStatus
-{
+enum ShStatus {
     SS_CLOSED = 0,
     SS_OPENING,
     SS_OPEN,
@@ -53,38 +51,41 @@ void hexDump(char *buf, const char *data, int size);
 
 class MaxDomeIIDriver
 {
-    public:
-        MaxDomeIIDriver() { fd = 0; }
+public:
+    MaxDomeIIDriver()
+    {
+        fd = 0;
+    }
 
-        const char *getDeviceName();
-        void SetPortFD(int port_fd);
-        void SetDevice(const char *name);
+    const char *getDeviceName();
+    void SetPortFD(int port_fd);
+    void SetDevice(const char *name);
 
-        int Connect(const char *device);
-        int Disconnect();
+    int Connect(const char *device);
+    int Disconnect();
 
-        int AbortAzimuth();
-        int HomeAzimuth();
-        int GotoAzimuth(int nDir, int nTicks);
-        int Status(ShStatus *shStatus, AzStatus *azStatus,
-                unsigned *azimuthPos, unsigned *homePos);
-        int Ack();
-        int SetPark(int nParkOnShutter, int nTicks);
-        int SetTicksPerTurn(int nTicks);
-        int Park();
+    int AbortAzimuth();
+    int HomeAzimuth();
+    int GotoAzimuth(int nDir, int nTicks);
+    int Status(ShStatus *shStatus, AzStatus *azStatus,
+               unsigned *azimuthPos, unsigned *homePos);
+    int Ack();
+    int SetPark(int nParkOnShutter, int nTicks);
+    int SetTicksPerTurn(int nTicks);
+    int Park();
 
-        //  Shutter commands
-        int OpenShutter();
-        int OpenUpperShutterOnly();
-        int CloseShutter();
-        int AbortShutter();
-        int ExitShutter();
+    //  Shutter commands
+    int OpenShutter();
+    int OpenUpperShutterOnly();
+    int CloseShutter();
+    int AbortShutter();
+    int ExitShutter();
 
-    protected:
-        int ReadResponse();
-        int SendCommand(char cmdId, const char *payload, int payloadLen);
+protected:
+    int ReadResponse();
+    int SendCommand(char cmdId, const char *payload, int payloadLen);
 
-    private:
-        int fd;
-        char buffer[16];
+private:
+    int fd;
+    char buffer[16];
 };

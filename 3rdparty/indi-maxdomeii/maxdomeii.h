@@ -34,7 +34,7 @@
 
 class MaxDomeII : public INDI::Dome
 {
-  public:
+public:
     MaxDomeII();
     ~MaxDomeII();
 
@@ -59,7 +59,7 @@ class MaxDomeII : public INDI::Dome
     //virtual IPState Home();
     virtual bool Abort() override;
 
-  protected:
+protected:
     // Parking
     IPState ConfigurePark(int csbp, int parkingPos);
     virtual bool SetCurrentPark() override;
@@ -95,7 +95,7 @@ class MaxDomeII : public INDI::Dome
     INumber WatchDogN[1];
     INumberVectorProperty WatchDogNP;
 
-  private:
+private:
     std::vector<INumberVectorProperty*> numberProperties;
     std::vector<ISwitchVectorProperty*> switchProperties;
     std::vector<ITextVectorProperty*> textProperties;
