@@ -24,10 +24,13 @@
 
 #include <indidome.h>
 #include "maxdomeiidriver.h"
+#include <vector>
 
 #define MD_AZIMUTH_IDLE   0
 #define MD_AZIMUTH_MOVING 1
 #define MD_AZIMUTH_HOMING 2
+
+#define DEFAULT_PARK_AZ 90
 
 class MaxDomeII : public INDI::Dome
 {
@@ -50,50 +53,57 @@ class MaxDomeII : public INDI::Dome
 
     virtual IPState MoveAbs(double az) override;
     virtual IPState Move(DomeDirection dir, DomeMotionCommand operation) override;
+    virtual IPState Park() override;
+    virtual IPState UnPark() override;
 
     //virtual IPState Home();
     virtual bool Abort() override;
 
   protected:
     // Parking
-    IPState ConfigurePark(int nCSBP, double ParkAzimuth);
+    IPState ConfigurePark(int csbp, int parkingPos);
     virtual bool SetCurrentPark() override;
     virtual bool SetDefaultPark() override;
     virtual IPState ControlShutter(ShutterOperation operation) override;
 
     /*******************************************************/
     /* Misc routines
- ********************************************************/
+    ********************************************************/
     int AzimuthDistance(int nPos1, int nPos2);
     double TicksToAzimuth(int nTicks);
     int AzimuthToTicks(double nAzimuth);
     int handle_driver_error(int *error, int *nRetry); // Handles errors returned by driver
 
-    ISwitch ShutterModeS[2];
-    ISwitchVectorProperty ShutterModeSP;
-
-    INumber ShutterOperationAzimuthN[1];
-    INumberVectorProperty ShutterOperationAzimuthNP;
-
-    ISwitch ShutterConflictS[2];
-    ISwitchVectorProperty ShutterConflictSP;
-
-    ISwitch HomeS[1];
-    ISwitchVectorProperty HomeSP;
-
     INumber TicksPerTurnN[1];
     INumberVectorProperty TicksPerTurnNP;
-
-    INumber WatchDogN[1];
-    INumberVectorProperty WatchDogNP;
 
     INumber HomeAzimuthN[1];
     INumberVectorProperty HomeAzimuthNP;
 
-    INumber HomePosRN[1];
-    INumberVectorProperty HomePosRNP;
+    //INumber ParkAzimuthN[1];
+    //INumberVectorProperty ParkAzimuthNP;
+
+    ISwitch ShutterModeS[2];
+    ISwitchVectorProperty ShutterModeSP;
+
+    ISwitch ParkOnShutterS[2];
+    ISwitchVectorProperty ParkOnShutterSP;
+
+    ISwitch HomeS[1];
+    ISwitchVectorProperty HomeSP;
+
+    INumber WatchDogN[1];
+    INumberVectorProperty WatchDogNP;
 
   private:
+    std::vector<INumberVectorProperty*> numberProperties;
+    std::vector<ISwitchVectorProperty*> switchProperties;
+    std::vector<ITextVectorProperty*> textProperties;
+    std::vector<IBLOBVectorProperty*> blobProperties;
+
+    void registerNumberHandler(INumberVectorProperty *prop);
+    void registerSwitchHandler(ISwitchVectorProperty *prop);
+
     int nTicksPerTurn;           // Number of ticks per turn of azimuth dome
     unsigned nCurrentTicks;      // Position as reported by the MaxDome II
     int nCloseShutterBeforePark; // 0 no close shutter
@@ -105,9 +115,14 @@ class MaxDomeII : public INDI::Dome
     int nTargetAzimuth;
     int nTimeSinceLastCommunication; // Used by Watch Dog
 
-    double prev_az, prev_alt;
-
     bool SetupParms();
+    bool OnSetTicksPerTurn(double value);
+    bool OnSetHomeAzimuth(double value);
+    bool OnSetParkAzimuth(double value);
+    bool OnSetWatchdog(double value);
+    bool OnSetParkOnShutter(int csbp);
+    bool OnSetShutterOpeningMode();
+    bool OnHomeSwitch();
 
     MaxDomeIIDriver driver;
 };
